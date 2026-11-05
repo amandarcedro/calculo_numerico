@@ -1,0 +1,511 @@
+---
+title: "Trabalho_Computacional_01"
+author: "Amanda Rehder Cedro - 253507"
+format: html
+editor: visual
+---
+
+#QUESTAO 1
+
+```{r}
+n <- 30000
+x1 <- 0.5
+x2 <- 0.11
+
+# Cálculo exato
+S_exato1 <- n * x1
+S_exato2 <- n * x2
+
+# Cálculo por soma parcela a parcela
+S_soma1 <- 0
+S_soma2 <- 0
+for (i in 1:n) {
+  S_soma1 <- S_soma1 + x1
+  S_soma2 <- S_soma2 + x2
+}
+
+# Erros absolutos
+erro_abs1 <- abs(S_exato1 - S_soma1)
+erro_abs2 <- abs(S_exato2 - S_soma2)
+
+# Erros relativos
+erro_rel1 <- erro_abs1 / abs(S_exato1)
+erro_rel2 <- erro_abs2 / abs(S_exato2)
+
+# Exibição dos resultados
+cat("Para xi = 0.5:\n")
+cat("  S_exato =", format(S_exato1, digits = 20), "\n  S_soma =", format(S_soma1, digits = 20), "\n")
+cat("  Diferença =", format(S_exato1 - S_soma1, digits = 15), "\n")
+cat("  Erro absoluto =", erro_abs1, ", Erro relativo =", erro_rel1, "\n\n")
+
+cat("Para xi = 0.11:\n")
+cat("  S_exato =", format(S_exato2, digits = 20), "\n  S_soma =", format(S_soma2, digits = 20), "\n")
+cat("  Diferença =", format(S_exato2 - S_soma2, digits = 15), "\n")
+cat("  Erro absoluto =", erro_abs2, ", Erro relativo =", erro_rel2, "\n")
+```
+
+#QUESTAO 2 ##a- OK
+
+```{r}
+f  <- function(x) x^3 - 9*x + 3
+df <- function(x) 3*x^2 - 9
+
+x  <- 0.5
+E1 <- 1e-4
+E2 <- 1e-4
+maxit <- 10000
+
+cat(sprintf("%-4s | %-14s | %-14s | %-14s | %-10s\n",
+            "Iter", "x_k", "f(x_k)", "f'(x_k)", "|Δx|/|x_k|"))
+cat(rep("-", 70), "\n", sep = "")
+
+fx <- f(x)
+cat(sprintf("%3d  | %14.12f | %14.6e | %14.12f |     ---\n", 0, x, fx, df(x)))
+
+for (k in 1:maxit) {
+  dfx <- df(x)
+  if (dfx == 0) stop("Derivada zero, método não pode prosseguir")
+  x_novo <- x - fx/dfx
+  fx_novo <- f(x_novo)
+  delta_rel <- abs(x_novo - x) / max(abs(x_novo), .Machine$double.eps)
+
+  cat(sprintf("%3d  | %14.12f | %14.6e | %14.12f | %10.5e\n",
+              k, x_novo, fx_novo, df(x_novo), delta_rel))
+
+  if (abs(fx_novo) < E1 && delta_rel < E2) {
+    cat(sprintf("\n Critérios satisfeitos. Método parou na iteração %d.\n", k))
+    break
+  }
+
+  x <- x_novo
+  fx <- fx_novo
+}
+
+cat(sprintf("\nRaiz aproximada: x = %.12f\nf(x) = %.3e\n", x_novo, fx_novo))
+```
+
+##b-
+
+```{r}
+# Método da Secante para encontrar raízes de f(x)
+secante <- function(x0, x1, eps1, eps2, max_iter = 100) {
+  # Inicialização
+  iter <- 0
+  x_ant <- x0
+  x_atual <- x1
+  f_ant <- f(x_ant)
+  historico <- data.frame(iteracao = iter, x = x_atual, f_x = f_ant)
+  
+  while (iter < max_iter) {
+    iter <- iter + 1
+    f_atual <- f(x_atual)
+    
+    # Critério de parada 1: |f(x)| < eps1
+    if (abs(f_atual) < eps1) {
+      break
+    }
+    
+    # Evita divisão por zero
+    if (abs(f_atual - f_ant) < 1e-12) {
+      break
+    }
+    
+    # Fórmula do Método da Secante
+    x_prox <- x_atual - f_atual * (x_atual - x_ant) / (f_atual - f_ant)
+    
+    # Critério de parada 2: |x_{k+1} - x_k|/|x_{k+1}| < eps2
+    if (abs(x_prox - x_atual) / abs(x_prox) < eps2) {
+      x_atual <- x_prox
+      break
+    }
+    
+    # Atualiza para próxima iteração
+    x_ant <- x_atual
+    f_ant <- f_atual
+    x_atual <- x_prox
+    
+    # Registra histórico
+    historico <- rbind(historico, data.frame(iteracao = iter, x = x_atual, f_x = f(x_atual)))
+  }
+  
+  return(list(raiz = x_atual, iteracoes = iter, f_raiz = f(x_atual), historico = historico))
+}
+
+# Função f(x) = x³ - 9x + 3
+f <- function(x) {
+  return(x^3 - 9*x + 3)
+}
+
+## Aplicação com x0 = 0, x1 = 1
+cat("=== MÉTODO DA SECANTE ===\n")
+cat("Função: f(x) = x³ - 9x + 3\n")
+cat("Parâmetros iniciais: x0 = 0, x1 = 1\n")
+cat("Critérios de parada: ε1 = 5e-4, ε2 = 5e-4\n\n")
+
+resultado1 <- secante(0, 1, 5e-4, 5e-4)
+
+cat("Resultado com x0 = 0, x1 = 1:\n")
+cat("Raiz aproximada:", resultado1$raiz, "\n")
+cat("Número de iterações:", resultado1$iteracoes, "\n")
+cat("f(raiz) =", resultado1$f_raiz, "\n\n")
+
+# Tabela com histórico das iterações
+cat("Histórico das iterações:\n")
+print(resultado1$historico)
+
+## Nova inicialização: x0 = 2, x1 = 3 (para encontrar outra raiz)
+cat("\n")
+cat(paste0(rep("=", 50), collapse = ""), "\n")
+cat("Nova inicialização: x0 = 2, x1 = 3\n")
+
+resultado2 <- secante(2, 3, 5e-4, 5e-4)
+
+cat("Resultado com x0 = 2, x1 = 3:\n")
+cat("Raiz aproximada:", resultado2$raiz, "\n")
+cat("Número de iterações:", resultado2$iteracoes, "\n")
+cat("f(raiz) =", resultado2$f_raiz, "\n\n")
+
+cat("Histórico das iterações:\n")
+print(resultado2$historico)
+
+```
+
+#c-
+
+```{r}
+bisseccao <- function(f, a, b, epsilon1, epsilon2, max_iter) {
+  if (f(a)*f(b) >= 0) {
+    stop("Não há mudança de sinal no intervalo [a,b]")
+  }
+  
+  iter <- 0
+  x <- (a + b)/2
+  erro_f <- abs(f(x))
+  erro_x <- Inf
+  x_ant <- x
+  
+  cat("Método da Bissecção:\n")
+  cat("Iter |     x     |    f(x)    |  Erro f  |  Erro x  \n")
+  cat("----------------------------------------------------\n")
+  
+  while ((erro_f >= epsilon1 || erro_x >= epsilon2) && iter < max_iter) {
+    iter <- iter + 1
+    x_ant <- x
+    
+    if (f(a)*f(x) < 0) {
+      b <- x
+    } else {
+      a <- x
+    }
+    
+    x <- (a + b)/2
+    erro_f <- abs(f(x))
+    erro_x <- abs(x - x_ant)/abs(x)
+    
+    cat(sprintf("%4d | %9.6f | %9.6f | %8.2e | %8.2e\n", iter, x, f(x), erro_f, erro_x))
+  }
+  
+  return(list(raiz = x, iter = iter, erro_f = erro_f, erro_x = erro_x))
+}
+
+# Execução da bissecção
+a <- 0; b <- 1
+cat("\n--- Bissecção no intervalo [0,1] ---\n")
+resultado_biss <- bisseccao(f, a, b, epsilon1, epsilon2, max_iter)
+```
+
+#QUESTAO 3 #a-
+
+```{r}
+gauss_pivotamento <- function(A, b) {
+  n <- length(b)
+  A_aug <- cbind(A, b)
+  
+  # Eliminação progressiva
+  for (k in 1:(n-1)) {
+    # Pivotamento parcial
+    pivot_row <- which.max(abs(A_aug[k:n, k])) + k - 1
+    if (pivot_row != k) {
+      A_aug[c(k, pivot_row), ] <- A_aug[c(pivot_row, k), ]
+    }
+    
+    # Eliminação
+    for (i in (k+1):n) {
+      factor <- A_aug[i, k] / A_aug[k, k]
+      A_aug[i, k:(n+1)] <- A_aug[i, k:(n+1)] - factor * A_aug[k, k:(n+1)]
+    }
+  }
+  
+  # Substituição regressiva
+  x <- numeric(n)
+  x[n] <- A_aug[n, n+1] / A_aug[n, n]
+  
+  for (i in (n-1):1) {
+    x[i] <- (A_aug[i, n+1] - sum(A_aug[i, (i+1):n] * x[(i+1):n])) / A_aug[i, i]
+  }
+  
+  return(x)
+}
+
+# Sistema dado
+A <- matrix(c(2, 2, 1, 1,
+              1, -1, 2, -1,
+              3, 2, -3, -2,
+              4, 3, 2, 1), nrow = 4, byrow = TRUE)
+
+b <- c(7, 1, 4, 12)
+
+# Resolução
+x_gauss <- gauss_pivotamento(A, b)
+cat("Solução por Eliminação de Gauss:\n")
+print(x_gauss)
+cat("Verificação: A*x - b =\n")
+print(A %*% x_gauss - b)
+```
+
+#b-
+
+```{r}
+analyze_hilbert <- function(n) {
+  # Gerar matriz de Hilbert
+  H <- matrix(0, n, n)
+  for (i in 1:n) {
+    for (j in 1:n) {
+      H[i, j] <- 1 / (i + j - 1)
+    }
+  }
+  
+  # Vetor b (solução exata x = [1, 1, ..., 1]^T)
+  b <- rowSums(H)
+  
+  # Resolver sistema
+  x_calculated <- gauss_pivotamento(H, b)
+  x_exact <- rep(1, n)
+  
+  # Calcular erros
+  error <- norm(as.matrix(x_calculated - x_exact), "2")
+  cond_number <- kappa(H)
+  
+  cat(sprintf("n = %d:\n", n))
+  cat(sprintf("  Erro: %.6e\n", error))
+  cat(sprintf("  Número de condicionamento: %.6e\n", cond_number))
+  cat("  Solução calculada:\n")
+  print(x_calculated)
+}
+
+# Análise para diferentes tamanhos
+sizes <- c(4, 10, 20)
+for (n in sizes) {
+  analyze_hilbert(n)
+  cat("\n")
+}
+```
+
+#c-
+
+```{r}
+gauss_jacobi <- function(A, b, x0, tol, max_iter) {
+  n <- length(b)
+  x <- x0
+  iter <- 0
+  
+  D <- diag(diag(A))
+  R <- A - D
+  
+  cat("Método de Gauss-Jacobi:\n")
+  cat("Iter |     Erro\n")
+  cat("-----------------\n")
+  
+  while (iter < max_iter) {
+    iter <- iter + 1
+    x_old <- x
+    x <- solve(D) %*% (b - R %*% x_old)
+    
+    # Verificar se há valores NaN ou Inf
+    if (any(is.nan(x)) || any(is.infinite(x))) {
+      cat("Divergência detectada na iteração", iter, "\n")
+      break
+    }
+    
+    error <- max(abs(x - x_old))
+    cat(sprintf("%4d | %9.6e\n", iter, error))
+    
+    if (error < tol) {
+      break
+    }
+  }
+  
+  return(list(x = x, iter = iter))
+}
+
+# Aplicar aos sistemas
+x0 <- rep(0, 4)
+tol <- 1e-6
+max_iter <- 1000
+
+cat("--- Sistema Original ---\n")
+result_jacobi <- gauss_jacobi(A, b, x0, tol, max_iter)
+cat("Solução:\n")
+print(result_jacobi$x)
+cat("Iterações:", result_jacobi$iter, "\n")
+
+# Aplicar às matrizes de Hilbert
+for (n in sizes) {
+  H <- matrix(0, n, n)
+  for (i in 1:n) {
+    for (j in 1:n) {
+      H[i, j] <- 1 / (i + j - 1)
+    }
+  }
+  b_h <- rowSums(H)
+  
+  cat(sprintf("\n--- Matriz de Hilbert n = %d ---\n", n))
+  result_jacobi_h <- gauss_jacobi(H, b_h, rep(0, n), tol, max_iter)
+  cat("Iterações:", result_jacobi_h$iter, "\n")
+}
+```
+
+#QUESTAO 4 #a-
+
+```{r}
+newton_sistema <- function(F, J, x0, epsilon, max_iter) {
+  x <- x0
+  iter <- 0
+  norm_f <- norm(F(x), "2")
+  norm_dx <- Inf
+  
+  cat("Método de Newton para Sistemas Não Lineares:\n")
+  cat("Iter |     x1     |     x2     |  ||F(x)||  | ||Δx||∞ \n")
+  cat("--------------------------------------------------------\n")
+  
+  while ((norm_f >= epsilon || norm_dx >= epsilon) && iter < max_iter) {
+    iter <- iter + 1
+    x_old <- x
+    
+    delta_x <- solve(J(x), -F(x))
+    x <- x + delta_x
+    
+    norm_f <- norm(F(x), "2")
+    norm_dx <- max(abs(x - x_old))
+    
+    cat(sprintf("%4d | %10.6f | %10.6f | %9.2e | %9.2e\n", 
+                iter, x[1], x[2], norm_f, norm_dx))
+    
+    if (norm_f < epsilon && norm_dx < epsilon) {
+      break
+    }
+  }
+  
+  return(list(x = x, iter = iter, norm_f = norm_f, norm_dx = norm_dx))
+}
+
+# Definir o sistema não linear
+F <- function(x) {
+  c(4*x[1] - x[1]^3 + x[2],
+    -x[1]^2/9 + 4*x[2] - x[2]^2/4 + 1)
+}
+
+J <- function(x) {
+  matrix(c(4 - 3*x[1]^2, 1,
+           -2*x[1]/9, 4 - x[2]/2), 
+         nrow = 2, byrow = TRUE)
+}
+
+# Executar método
+x0 <- c(1.0, 0.5)
+epsilon <- 1e-4
+max_iter <- 100
+
+result <- newton_sistema(F, J, x0, epsilon, max_iter)
+cat(sprintf("\nSolução: x = [%.6f, %.6f]\n", result$x[1], result$x[2]))
+cat(sprintf("Iterações: %d\n", result$iter))
+```
+
+#b-
+
+```{r}
+library(ggplot2)
+library(ggplot2)
+# Criar grid
+x1 <- seq(-4, 4, length.out = 100)
+x2 <- seq(-4, 4, length.out = 100)
+grid <- expand.grid(x1 = x1, x2 = x2)
+
+# Calcular funções
+grid$F1 <- 4*grid$x1 - grid$x1^3 + grid$x2
+grid$F2 <- - (grid$x1^2)/9 + 4*grid$x2 - (grid$x2^2)/4 + 1
+
+# Solução encontrada
+solucao <- c(1.0437, 0.5086)
+
+# Gráfico CORRETO
+ggplot(grid, aes(x = x1, y = x2)) +
+  # Curva da primeira equação
+  geom_contour(aes(z = F1), breaks = 0, color = "#d6277e", size = 1) +
+  
+  # Curva da segunda equação  
+  geom_contour(aes(z = F2), breaks = 0, color = "purple", size = 1) +
+  annotate("point", x = solucao[1], y = solucao[2], 
+           color = "turquoise", size = 4, fill = "white", shape = 21, stroke = 2) +
+  annotate("text", x = solucao[1], y = solucao[2] + 0.5,
+           label = sprintf("(%.3f, %.3f)", solucao[1], solucao[2]),
+           color = "black", size = 4) +
+  
+  labs(x = "x₁", y = "x₂", title = "Sistema Não Linear") +
+  theme_minimal()
+
+# Testar pontos iniciais
+pontos_iniciais <- list(c(1.0, 0.5), c(0.5, 0.5), c(1.5, 1.0), c(2.0, 2.0), c(-1.0, -0.5))
+
+cat("\n=== Teste com diferentes pontos iniciais ===\n")
+for (i in 1:length(pontos_iniciais)) {
+  x0_test <- pontos_iniciais[[i]]
+  cat(sprintf("\nPonto inicial: [%.1f, %.1f]\n", x0_test[1], x0_test[2]))
+  
+  tryCatch({
+    result_test <- newton_sistema(F, J, x0_test, 1e-4, 50)
+    cat(sprintf("  Convergiu para: [%.6f, %.6f] em %d iterações\n", 
+                result_test$x[1], result_test$x[2], result_test$iter))
+  }, error = function(e) {
+    cat("  Não convergiu\n")
+  })
+}
+```
+
+#c-
+
+```{r}
+cat("\n=== ε = 1e-12 ===\n")
+epsilon_fine <- 1e-12
+result_fine <- newton_sistema(F, J, x0, epsilon_fine, max_iter)
+
+cat(sprintf("\nSolução com ε=1e-12: x = [%.6f, %.6f]\n", 
+            result_fine$x[1], result_fine$x[2]))
+cat(sprintf("Iterações: %d\n", result_fine$iter))
+```
+
+#d-
+
+```{r}
+cat("\n=== ε = 1e-25 ===\n")
+epsilon_extreme <- 1e-25
+result_extreme <- newton_sistema(F, J, x0, epsilon_extreme, max_iter)
+
+cat(sprintf("\nSolução com ε=1e-25: x = [%.15f, %.15f]\n", 
+            result_extreme$x[1], result_extreme$x[2]))
+cat(sprintf("Iterações: %d\n", result_extreme$iter))
+cat(sprintf("Precisão de máquina: %.1e\n", .Machine$double.eps))
+```
+
+# Análise de Convergência
+
+```{r}
+cat("\n=== Análise de Convergência ===\n")
+cat(sprintf("ε = 1e-4:  %d iterações\n", result$iter))
+cat(sprintf("ε = 1e-12: %d iterações\n", result_fine$iter))
+cat(sprintf("ε = 1e-25: %d iterações\n", result_extreme$iter))
+
+# Verificar se atingiu precisão de máquina
+cat(sprintf("\nPrecisão de máquina: %.1e\n", .Machine$double.eps))
+cat(sprintf("||F(x)|| final: %.1e\n", result_extreme$norm_f))
+```
